@@ -21,6 +21,7 @@ import sys
 import re
 import subprocess
 import glob
+from setuptools import setup, find_packages
 
 if sys.version_info[0] < 3:
     import __builtin__ as builtins
@@ -142,19 +143,19 @@ if not release:
     finally:
         a.close()
 
-
-def configuration(parent_package='', top_path=None):
-    from numpy.distutils.misc_util import Configuration
-    config = Configuration(None, parent_package, top_path)
-    config.set_options(ignore_setup_xxx_py=True,
-                       assume_default_configuration=True,
-                       delegate_options_to_subpackages=True,
-                       quiet=True)
-
-    config.add_subpackage('pyart')
-    config.add_data_files(('pyart', '*.txt'))
-
-    return config
+#
+# def configuration(parent_package='', top_path=None):
+#     from numpy.distutils.misc_util import Configuration
+#     config = Configuration(None, parent_package, top_path)
+#     config.set_options(ignore_setup_xxx_py=True,
+#                        assume_default_configuration=True,
+#                        delegate_options_to_subpackages=True,
+#                        quiet=True)
+#
+#     config.add_subpackage('pyart')
+#     config.add_data_files(('pyart', '*.txt'))
+#
+#     return config
 
 
 def setup_package():
@@ -162,7 +163,7 @@ def setup_package():
     # rewrite version file
     write_version_py()
 
-    from numpy.distutils.core import setup
+    # from numpy.distutils.core import setup
 
     setup(
         name=NAME,
@@ -176,7 +177,29 @@ def setup_package():
         license=LICENSE,
         classifiers=CLASSIFIERS,
         platforms=PLATFORMS,
-        configuration=configuration,
+        # configuration=configuration,
+        packages=find_packages(include=['pyart']),
+        setup_requires=[],
+        extras_require={
+            # 'build': [
+            #     'trmm_rsl',  # not on pypi - need to package?
+            # ],
+        },
+        install_requires=[
+            'scipy',
+            'matplotlib',
+            'netcdf4',
+            'numpy>=1.10',
+
+            'wradlib',  # from environment.yml
+            'cartopy',  # from environment.yml
+            'xarray',  # from environment.yml
+        ],
+        tests_require=[
+            'numpy>=1.10',
+            'Cython>=0.28',
+            'arm_pyart',
+        ],
         scripts=SCRIPTS,
     )
 
