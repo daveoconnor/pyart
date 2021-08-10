@@ -60,6 +60,7 @@ doc/build
 doc/cdoc/build
 # Egg metadata
 *.egg-info
+.eggs/
 # The shelf plugin uses this dir
 ./.shelf
 MANIFEST

@@ -218,7 +218,7 @@ functionality is available of the following modules are installed.
 
 * `Basemap <https://matplotlib.org/basemap/>`_. If installed, also gives the
   ability to plot grids on geographic maps, but Cartopy is recommended over
-  Basemap.
+  Basemap. Not usable through pip installs because no Basemap PyPi package exists.
 
 * `wradlib <https://docs.wradlib.org/en/latest/>`_.  Needed to calculate the texture
   of a differential phase field.

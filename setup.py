@@ -21,13 +21,54 @@ import sys
 import re
 import subprocess
 import glob
-from setuptools import setup, find_packages
+from setuptools import dist, setup, find_packages
+from setuptools.extension import Extension
+dist.Distribution().fetch_build_eggs(['Cython>=0.28', 'numpy>=1.10'])
+import numpy
 
 if sys.version_info[0] < 3:
     import __builtin__ as builtins
 else:
     import builtins
 
+
+def pyart_extensions():
+    return [
+        Extension('pyart.__check_build._check_build', sources=[
+            'pyart/__check_build/_check_build.pyx',
+        ]),
+        # TODO: add trmm from artpy/correct/setup.py
+        Extension('pyart.correct._unwrap_1d', sources=[
+            'pyart/correct/_unwrap_1d.pyx',
+        ]),
+        Extension('pyart.correct._unwrap_2d', sources=[
+            'pyart/correct/_unwrap_2d.pyx',
+        ]),
+        Extension('pyart.correct._unwrap_3d', sources=[
+            'pyart/correct/_unwrap_3d.pyx',
+        ]),
+        Extension('pyart.correct._fast_edge_finder', sources=[
+            'pyart/correct/_fast_edge_finder.pyx',
+        ]),
+        Extension('pyart.io._sigmetfile', sources=[
+            'pyart/io/_sigmetfile.pyx',
+        ]),
+        Extension('pyart.io.nexrad_interpolate', sources=[
+            'pyart/io/nexrad_interpolate.pyx',
+        ]),
+        Extension('pyart.map.ckdtree', sources=[
+            'pyart/map/ckdtree.pyx',
+        ]),
+        Extension('pyart.map._load_nn_field_data', sources=[
+            'pyart/map/_load_nn_field_data.pyx',
+        ]),
+        Extension('pyart.map._gate_to_grid_map', sources=[
+            'pyart/map/_gate_to_grid_map.pyx',
+        ]),
+        Extension('pyart.retrieve._kdp_proc', sources=[
+            'pyart/retrieve/_kdp_proc.pyx',
+        ]),
+    ]
 
 CLASSIFIERS = [
     'Development Status :: 5 - Production/Stable',
@@ -157,14 +198,20 @@ if not release:
 #
 #     return config
 
+TEST_DEPENDENCIES = [
+    'cartopy',
+    'hypothesis',
+    'pytest',
+    'numpy>=1.10',
+    'xarray',
+]
+
+DEV_DEPENDENCIES = [
+   'pip-tools'
+] + TEST_DEPENDENCIES
+
 
 def setup_package():
-
-    # rewrite version file
-    write_version_py()
-
-    # from numpy.distutils.core import setup
-
     setup(
         name=NAME,
         maintainer=MAINTAINER,
@@ -179,29 +226,38 @@ def setup_package():
         platforms=PLATFORMS,
         # configuration=configuration,
         packages=find_packages(include=['pyart']),
-        setup_requires=[],
-        extras_require={
-            # 'build': [
-            #     'trmm_rsl',  # not on pypi - need to package?
-            # ],
-        },
+        setup_requires=[
+            'Cython>=0.28',
+            'numpy>=1.10',
+            'semver',
+            'setuptools>=18.0',
+        ],
         install_requires=[
+            'numpy>=1.10',
             'scipy',
             'matplotlib',
             'netcdf4',
-            'numpy>=1.10',
-
-            'wradlib',  # from environment.yml
-            'cartopy',  # from environment.yml
-            'xarray',  # from environment.yml
         ],
-        tests_require=[
-            'numpy>=1.10',
-            'Cython>=0.28',
-            'arm_pyart',
-        ],
+        extras_require={
+            'cartopy': ['cartopy'],
+            'cvxopt': ['cvxopt'],
+            'cylp': ['cylp'],
+            'gdal': ['gdal'],
+            'h5py': ['h5py'],
+            'pyglpk': ['glpk'],
+            'wradlib': ['wradlib'],
+            'xarray': ['xarray'],
+            # 'trmm_rsl': ['trmm_rsl'],
+            'basemap': ['basemap'],    # conda only, no pypi package exists
+            'dev': DEV_DEPENDENCIES,
+            'test': TEST_DEPENDENCIES,
+        },
+        ext_modules=pyart_extensions(),
+        include_dirs=[numpy.get_include()],
         scripts=SCRIPTS,
     )
+    # rewrite version file
+    write_version_py()
 
 if __name__ == '__main__':
     setup_package()
