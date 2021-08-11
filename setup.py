@@ -16,12 +16,11 @@ of weather radars.
 DOCLINES = __doc__.split("\n")
 
 import os
-import shutil
 import sys
-import re
 import subprocess
 import glob
 from setuptools import dist, setup, find_packages
+
 from setuptools.extension import Extension
 dist.Distribution().fetch_build_eggs(['Cython>=0.28', 'numpy>=1.10'])
 import numpy
@@ -31,21 +30,68 @@ if sys.version_info[0] < 3:
 else:
     import builtins
 
+import os
+import sys
+
+
+def guess_rsl_path():
+    return {'darwin': '/usr/local/trmm',
+            'linux2': '/usr/local/trmm',
+            'linux': '/usr/local/trmm',
+            'win32': 'XXX'}[sys.platform]
+
+
+def get_rsl_lib_and_include_path():
+    rsl_path = os.environ.get('RSL_PATH')
+    if rsl_path is None:
+        rsl_path = guess_rsl_path()
+    rsl_lib_path = os.path.join(rsl_path, 'lib')
+    rsl_include_path = os.path.join(rsl_path, 'include')
+    return rsl_lib_path, rsl_include_path
+
+
+def check_rsl_path(rsl_lib_path, rsl_include_path):
+    ext = {'darwin': 'dylib',
+           'linux2': 'so',
+           'linux': 'so',
+           'win32': 'DLL'}[sys.platform]
+    lib_file = os.path.join(rsl_lib_path, 'librsl.' + ext)
+    if os.path.isfile(lib_file) is False:
+        return False
+
+    inc_file = os.path.join(rsl_include_path, 'rsl.h')
+    if os.path.isfile(inc_file) is False:
+        return False
+    return True
+
+
+rsl_lib_path, rsl_include_path = get_rsl_lib_and_include_path()
 
 def pyart_extensions():
+    rsl_extensions = []
+    if check_rsl_path(rsl_lib_path, rsl_include_path):
+        rsl_extensions = [
+            Extension('_fourdd_interface', sources=[
+                'pyart/correct/src/dealias_fourdd.c',
+                'pyart/correct/src/sounding_to_volume.c',
+                'pyart/correct/src/helpers.c',
+            ]),
+        ]
+
     return [
         Extension('pyart.__check_build._check_build', sources=[
             'pyart/__check_build/_check_build.pyx',
         ]),
-        # TODO: add trmm from artpy/correct/setup.py
         Extension('pyart.correct._unwrap_1d', sources=[
             'pyart/correct/_unwrap_1d.pyx',
         ]),
         Extension('pyart.correct._unwrap_2d', sources=[
             'pyart/correct/_unwrap_2d.pyx',
+            'pyart/correct/unwrap_2d_ljmu.c',
         ]),
         Extension('pyart.correct._unwrap_3d', sources=[
             'pyart/correct/_unwrap_3d.pyx',
+            'pyart/correct/unwrap_3d_ljmu.c',
         ]),
         Extension('pyart.correct._fast_edge_finder', sources=[
             'pyart/correct/_fast_edge_finder.pyx',
@@ -68,7 +114,7 @@ def pyart_extensions():
         Extension('pyart.retrieve._kdp_proc', sources=[
             'pyart/retrieve/_kdp_proc.pyx',
         ]),
-    ]
+    ] + rsl_extensions
 
 CLASSIFIERS = [
     'Development Status :: 5 - Production/Stable',
@@ -106,7 +152,6 @@ ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 SCRIPTS = glob.glob('scripts/*')
 
-
 # Return the git revision as a string
 def git_version():
     def _minimal_ext_cmd(cmd):
@@ -131,6 +176,7 @@ def git_version():
         GIT_REVISION = "Unknown"
 
     return GIT_REVISION
+
 
 # BEFORE importing distutils, remove MANIFEST. distutils doesn't properly
 # update it when the contents of directories change.
@@ -226,6 +272,7 @@ def setup_package():
         platforms=PLATFORMS,
         # configuration=configuration,
         packages=find_packages(include=['pyart']),
+        python_requires='>=2.6, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*',
         setup_requires=[
             'Cython>=0.28',
             'numpy>=1.10',
@@ -253,7 +300,10 @@ def setup_package():
             'test': TEST_DEPENDENCIES,
         },
         ext_modules=pyart_extensions(),
-        include_dirs=[numpy.get_include()],
+        include_dirs=[
+            numpy.get_include(),
+            rsl_include_path,
+        ],
         scripts=SCRIPTS,
     )
     # rewrite version file
