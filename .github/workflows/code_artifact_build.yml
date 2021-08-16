@@ -1,0 +1,40 @@
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    steps:
+      # - uses: actions/checkout@v2  # just for local with act
+      #   with:
+      #     repository: sixfeetup/pyart
+      #     ref: setuptools
+      #     token: ${{ secrets.GH_TOKEN }}
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install twine awscli
+      - name: Configure Code Artifact Token
+        run: |
+          CA_TOKEN=$(aws codeartifact get-authorization-token --region $AWS_REGION --domain ${{ secrets.DOMAIN }} --domain-owner ${{ secrets.OWNER }} --query authorizationToken --output text)
+          echo "CA_TOKEN=$CA_TOKEN" >> $GITHUB_ENV
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
+      - name: build package
+        run: make build
+      - name: extract package
+        run: make extractdist
+      - name: examine build artifacts
+        run: ls -lah $(pwd)/dist
+      - name: upload artifacts
+        run: twine upload --repository-url https://${{ secrets.DOMAIN }}-${{ secrets.OWNER }}.d.codeartifact.us-east-1.amazonaws.com/pypi/${{ secrets.DOMAIN }}/ --username aws --password $CA_TOKEN --non-interactive --skip-existing $(pwd)/dist/*

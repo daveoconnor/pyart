@@ -1,8 +1,8 @@
 build: Dockerfile ## Create the build and runtime images
-	#docker build -t pyart .
-	 docker build --target=artifact --output type=local,dest=$(pwd)/ .
+	docker build -t pyart .
 
 extractdist: ## copy the dist out of a running container
+	@docker create --name pyart pyart
 	@docker cp pyart:/tmp/pyart/dist .
 
 up:	## run the docker container to allow extracting the dist or to testing

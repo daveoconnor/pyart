@@ -44,6 +44,6 @@ RUN virtualenv -p python venv \
 #RUN PYART_QUIET=true python -m pytest
 
 FROM scratch as artifact
-COPY --from=build /tmp/pyart/dist /dist
+COPY --from=build /tmp/pyart/dist /tmp/pyart/dist
 
 ENTRYPOINT ["tail", "-f", "/dev/null"]
